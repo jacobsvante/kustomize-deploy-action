@@ -5,6 +5,25 @@ on:
 
 env:
   ACTION_NAME: kustomize-deploy-action
+  FAKE_KUBECONFIG: |
+    apiVersion: v1
+    clusters:
+    - name: "my-company"
+      cluster:
+        certificate-authority-data: ABC123
+        server: https://some-cloud-provider.io:6443
+    contexts:
+    - name: admin@my-company
+      context:
+        cluster: "my-company"
+        user: my-company-admin
+    current-context: admin@my-company
+    kind: Config
+    preferences: {}
+    users:
+    - name: my-company-admin
+      user:
+        token: abc123
 
 name: Main
 jobs:
@@ -135,7 +154,7 @@ jobs:
       - name: Run action
         uses: ./
         with:
-          kubeconfig: '{"fake": true}'
+          kubeconfig: ${{ env.FAKE_KUBECONFIG }}
           docker-server: my-docker-registry.io
           docker-password: my-user
           docker-username: abc123
@@ -168,7 +187,7 @@ jobs:
       - name: Run action again for verification purposes
         uses: ./
         with:
-          kubeconfig: '{"fake": true}'
+          kubeconfig: ${{ env.FAKE_KUBECONFIG }}
           docker-server: my-docker-registry.io
           docker-password: my-user
           docker-username: abc123
