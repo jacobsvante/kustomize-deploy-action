@@ -128,10 +128,12 @@ runs:
 
     - name: Setup kubeconfig
       shell: bash
+      env:
+        KUBECONFIG: "${{ inputs.kubeconfig }}"
       run: |
         mkdir ~/.kube || true
         if [[ "$KUBECONFIG_DRY_RUN" != "true" ]]; then
-          echo ${{ inputs.kubeconfig }} > ~/.kube/config
+          echo "$KUBECONFIG" > ~/.kube/config
         fi
 
     - name: Setup kubectl
