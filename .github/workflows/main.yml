@@ -1,0 +1,209 @@
+on:
+  push:
+    branches:
+      - main
+
+env:
+  ACTION_NAME: kustomize-deploy-action
+
+name: Main
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - uses: pre-commit/action@v3.0.0
+
+  test:
+    runs-on: ubuntu-latest
+    name: Test action
+    env:
+      KUSTOMIZATION_BASE_DIR: kustomize/base
+      KUSTOMIZATION_DIR: kustomize/overlays/staging
+      AGE_TEST_PUBLIC_KEY: age1l8paxjj9hd37wu24prsl24nux9ht30690r4lx3tk6hlrdv9rl4cqnm0th6
+      AGE_TEST_SECRET_KEY: AGE-SECRET-KEY-1CDL85PSFWFMMTNZMUZWL6Q4DJYFRGPHX6J7TCMZZURHXUTXPQNNSMF9ZW2
+      DEBUG: "true"
+      KUBECONFIG_DRY_RUN: "true"
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: jacobsvante/setup-age-action@main
+
+      - name: Create dummy kustomize base files
+        shell: bash
+        run: |
+
+          mkdir -p ${{ env.KUSTOMIZATION_BASE_DIR }}
+          cd ${{ env.KUSTOMIZATION_BASE_DIR }}
+
+          echo 'CONFIG_1=MY_VALUE' > config.env
+
+          cat <<EOF > kustomization.yaml
+          resources:
+          - deployment.yaml
+          - job.yaml
+          commonLabels:
+            app: my-app
+            app.kubernetes.io/name: my-app
+            app.kubernetes.io/instance: my-app
+          configMapGenerator:
+          - name: my-app
+            envs:
+            - "config.env"
+          images:
+          - name: APP_IMAGE
+            newName: my-docker-image  # NOTE: Replaced by CI/CD
+            newTag: latest  # NOTE: Replaced by CI/CD
+          EOF
+
+          cat <<EOF > deployment.yaml
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: my-app
+          spec:
+            template:
+              spec:
+                imagePullSecrets:
+                  - name: my-docker-registry.io
+                containers:
+                  - name: app
+                    image: APP_IMAGE  # NOTE: Will be replaced
+                    imagePullPolicy: IfNotPresent
+                    envFrom:
+                      - configMapRef:
+                          name: my-app
+                      - secretRef:
+                          name: my-app
+          EOF
+
+          cat <<EOF > job.yaml
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: my-job
+            labels:
+              delete-me: please
+          spec:
+            template:
+              spec:
+                imagePullSecrets:
+                  - name: my-docker-registry.io
+                restartPolicy: OnFailure
+                containers:
+                  - name: migrate
+                    args:
+                      - migrate
+                    image: hello-world:latest
+                    imagePullPolicy: IfNotPresent
+          EOF
+          cd ../..
+
+      - name: Create dummy kustomize overlay files
+        shell: bash
+        run: |
+          mkdir -p $KUSTOMIZATION_DIR
+          cd $KUSTOMIZATION_DIR
+
+          echo 'CONFIG_2=MY_STAGING_SPECIFIC_CONFIG_VALUE' > config.env
+
+          echo 'MY_FIRST_SECRET=value1\nMY_SECOND_SECRET=value2' | age --encrypt --recipient $AGE_TEST_PUBLIC_KEY > secrets.env
+
+          cat <<EOF > kustomization.yaml
+          bases:
+            - ../../base
+          namespace: my-k8s-namespace
+          configMapGenerator:
+            - name: my-app
+              behavior: merge
+              envs:
+                - "config.env"
+          secretGenerator:
+            - name: my-app
+              envs:
+                - "secrets.env.dec"
+          EOF
+          cd ../../..
+
+      - name: Create Kubernetes cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          version: v0.14.0
+          kubectl_version: v1.24.3
+
+      - name: Run action
+        uses: ./
+        with:
+          kubeconfig: '{"fake": true}'
+          docker-server: my-docker-registry.io
+          docker-password: my-user
+          docker-username: abc123
+          docker-repo: my-docker-namespace/my-docker-image
+          image-tag: "0.1.2"
+          pre-deploy-delete-job-selector: delete-me=please
+          kustomization-base-dir: ${{ env.KUSTOMIZATION_BASE_DIR }}
+          kustomization-dir: ${{ env.KUSTOMIZATION_DIR }}
+          age-secret-key: ${{ env.AGE_TEST_SECRET_KEY }}
+
+      - name: Test that namespace was created
+        run: |
+          kubectl get namespace my-k8s-namespace -o yaml
+
+      - name: Test that image pull secret was created with expected properties
+        run: |
+          kubectl get secret -n my-k8s-namespace -o yaml > output.yaml
+          grep 'name: my-docker-registry.io' output.yaml
+          grep 'namespace: my-k8s-namespace' output.yaml
+
+      - name: Test that deployment was made with expected properties
+        run: |
+          kubectl get deploy -n my-k8s-namespace -o yaml > output.yaml
+          grep 'image: my-docker-registry.io/my-docker-namespace/my-docker-image:0.1.2' output.yaml
+          grep 'namespace: my-k8s-namespace' output.yaml
+
+      - name: Ensure that job exists
+        run: kubectl get -n my-k8s-namespace job/my-job
+
+      - name: Run action again for verification purposes
+        uses: ./
+        with:
+          kubeconfig: '{"fake": true}'
+          docker-server: my-docker-registry.io
+          docker-password: my-user
+          docker-username: abc123
+          docker-repo: my-docker-namespace/my-docker-image
+          image-tag: "0.1.2"
+          pre-deploy-delete-job-selector: delete-me=please
+          kustomization-base-dir: ${{ env.KUSTOMIZATION_BASE_DIR }}
+          kustomization-dir: ${{ env.KUSTOMIZATION_DIR }}
+          age-secret-key: ${{ env.AGE_TEST_SECRET_KEY }}
+
+      - name: Ensure that job was deleted
+        run: kubectl get -n my-k8s-namespace job/my-job || echo "Job not found, as expected"
+
+  post-test:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Expect files created by action to no longer exist
+        run: |
+          [[ ! -f deploy-output.yaml ]]
+
+  release-please:
+    runs-on: ubuntu-latest
+    needs: [pre-commit, test, post-test]
+    steps:
+      - uses: google-github-actions/release-please-action@v3
+        id: release
+        with:
+          release-type: simple
+          package-name: ${{ env.ACTION_NAME }}
+          bump-minor-pre-major: true
+      - uses: actions/checkout@v3
+      - name: Tag major and minor versions in Git
+        if: ${{ steps.release.outputs.release_created }}
+        uses: jacobsvante/tag-major-minor-action@v0
+        with:
+          major: ${{ steps.release.outputs.major }}
+          minor: ${{ steps.release.outputs.minor }}
