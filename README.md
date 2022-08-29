@@ -26,8 +26,8 @@ Deploy to Kubernetes cluster using a Kustomize config
 | decrypted-filename             | Filename/subpath inside `kustomization-dir` to which the age encrypted secrets will be decrypted to                                                                                                  | `true`   | secrets.env.dec |
 | create-k8s-namespace           | Create Kubernetes namespace if it does not exist                                                                                                                                                     | `true`   | true            |
 | create-image-pull-secret       | Create an image pull secret named "rg.`$region`.scw.cloud", to be referenced in `imagePullSecrets` in a k8s deployment/job                                                                           | `true`   | true            |
-| kubectl-dry-run                | Used to set `kubectl` option `--dry-run` Valid values are `none` (default), `client` and `server`.                                                                                                   | `true`   | none            |
 | kubectl                        | Version of kubectl                                                                                                                                                                                   | `true`   | latest          |
+| kubectl-dry-run                | Used to set `kubectl` option `--dry-run` Valid values are `none` (default), `client` and `server`.                                                                                                   | `true`   | none            |
 
 <!-- action-docs-inputs -->
 
