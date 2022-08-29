@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.0](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.1.0...v0.1.0) (2022-08-29)
+
+
+### Bug Fixes
+
+* Initial commit ([5668af1](https://github.com/jacobsvante/kustomize-deploy-action/commit/5668af1d195353f161d803a80950722c0d439efe))
+* Quote $KUBECONFIG ([f126a6b](https://github.com/jacobsvante/kustomize-deploy-action/commit/f126a6b7e33256506d39c0fcd9ab2805cba2ea22))
+* Split release-please steps ([6b8a829](https://github.com/jacobsvante/kustomize-deploy-action/commit/6b8a8294ef24b097c695e1f7d5292d514ced24c6))
+
 ## 0.1.0 (2022-08-29)
 
 
