@@ -1,0 +1,202 @@
+name: Kustomize Deploy
+
+description: Deploy to Kubernetes cluster using a Kustomize config
+
+author: Jacob Magnusson
+
+branding:
+  icon: arrow-up-right
+  color: blue
+
+inputs:
+  kubeconfig:
+    description: Contents of the cluster's kubeconfig
+    required: true
+  kustomization-dir:
+    description: Path to the kustomize directory to apply / deploy (e.g. `kustomize/overlays/production`)
+    required: true
+
+  image-tag:
+    description: Docker image tag to deploy (e.g. `0.9.14`)
+    required: true
+
+  docker-server:
+    description: Docker server (e.g. `docker.io`)
+    required: true
+  docker-repo:
+    description: Docker repository (e.g. `my-org/my-app`)
+    required: true
+  docker-username:
+    description: Docker user (e.g. `my-username`)
+    required: true
+  docker-password:
+    description: Docker password (e.g. `abc123`)
+    required: true
+
+  pre-deploy-delete-job-selector:
+    description: Delete objects with `status.successful=1` and the given label (e.g. `autodelete-successful-on-deploy=yes`), before doing the deploy. Useful for cleaning up completed db migration jobs and similar.
+    required: false
+    default: ""
+
+  kustomization-base-dir:
+    description: Path to base kustomize directory
+    required: true
+    default: "kustomize/base"
+
+  age-secret-key:
+    description: Secret key to decrypt deploy secrets with (e.g. `AGE-SECRET-KEY-123456`)
+    required: false
+    default: ""
+  encrypted-filename:
+    description: Filename/subpath inside `kustomization-dir` to a file with age encrypted secrets to decrypt
+    required: true
+    default: "secrets.env"
+  decrypted-filename:
+    description: Filename/subpath inside `kustomization-dir` to which the age encrypted secrets will be decrypted to
+    required: true
+    default: "secrets.env.dec"
+
+  create-k8s-namespace:
+    description: Create Kubernetes namespace if it does not exist
+    required: true
+    default: "true"
+  create-image-pull-secret:
+    description: Create an image pull secret named "rg.`$region`.scw.cloud", to be referenced in `imagePullSecrets` in a k8s deployment/job
+    required: true
+    default: "true"
+
+  kubectl:
+    description: Version of kubectl
+    required: true
+    default: latest
+  kubectl-dry-run:
+    description: Used to set `kubectl` option `--dry-run` Valid values are `none` (default), `client` and `server`.
+    required: true
+    default: "none"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        clean: false
+
+    - name: Parse base kustomization.yaml
+      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de # 0.0.12
+      id: kustomization_base
+      with:
+        yaml-file: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
+
+    - name: Parse overlay kustomization.yaml
+      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de # 0.0.12
+      id: kustomization_overlay
+      with:
+        yaml-file: ${{ inputs.kustomization-dir }}/kustomization.yaml
+
+    - name: Print steps (including output from yamler)
+      shell: bash
+      if: ${{ env.DEBUG == 'true' }}
+      run: |
+        echo '${{ toJSON(steps) }}'
+
+    - name: Decrypt secrets with `age`
+      uses: jacobsvante/age-decrypt-action@v0
+      if: ${{ inputs.age-secret-key != '' && inputs.kustomization-dir != '' && inputs.encrypted-filename != '' }}
+      with:
+        secret-key: ${{ inputs.age-secret-key }}
+        input-file: ${{ inputs.kustomization-dir }}/${{ inputs.encrypted-filename }}
+        output-file: ${{ inputs.kustomization-dir }}/${{ inputs.decrypted-filename }}
+
+    - name: Substitute newTag
+      shell: bash
+      if: ${{ steps.kustomization_base.outputs.images__0__newtag }}
+      env:
+        IMAGE_TAG: ${{ inputs.image-tag }}
+        KUSTOMIZE_FILE: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
+      run: |
+        sed -i.bkp "s/newTag: .*/newTag: \"$IMAGE_TAG\"/g" $KUSTOMIZE_FILE
+
+    - name: Substitute newName
+      shell: bash
+      if: ${{ steps.kustomization_base.outputs.images__0__newname }}
+      env:
+        DOCKER_SERVER: ${{ inputs.docker-server }}
+        DOCKER_REPO: ${{ inputs.docker-repo }}
+        KUSTOMIZE_FILE: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
+      run: |
+        sed -i.bkp "s|newName: .*|newName: \"$DOCKER_SERVER/$DOCKER_REPO\"|" $KUSTOMIZE_FILE
+
+    - name: Setup kubeconfig
+      shell: bash
+      run: |
+        mkdir ~/.kube || true
+        if [[ "$KUBECONFIG_DRY_RUN" != "true" ]]; then
+          echo ${{ inputs.kubeconfig }} > ~/.kube/config
+        fi
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: "${{ inputs.kubectl }}"
+
+    - name: Get kustomize output
+      shell: bash
+      run: |
+        kubectl kustomize ${{ inputs.kustomization-dir }} > output.yaml
+        cat output.yaml
+
+    - name: Create k8s namespace
+      shell: bash
+      if: ${{ inputs.create-k8s-namespace && steps.kustomization_overlay.outputs.namespace }}
+      env:
+        K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace }}
+      run: |
+        [[ ${{ inputs.kubectl-dry-run }} != 'none' ]] \
+          && echo "[dry run] Creating namespace $K8S_NAMESPACE if it doesn't exist..."
+        kubectl get namespace $K8S_NAMESPACE \
+        || kubectl create namespace \
+            --dry-run=${{ inputs.kubectl-dry-run }} \
+            --output=yaml \
+            $K8S_NAMESPACE
+
+    - name: Create image pull secret
+      shell: bash
+      if: ${{ inputs.create-image-pull-secret == 'true' }}
+      env:
+        SECRET_NAME: ${{ inputs.docker-server }}
+        K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace || 'default' }}
+      run: |
+        [[ ${{ inputs.kubectl-dry-run }} != 'none' ]] \
+          && echo "[dry run] Creating k8s docker-registry secret..."
+        kubectl get secret \
+          --namespace $K8S_NAMESPACE \
+          $SECRET_NAME \
+        || kubectl create secret docker-registry \
+          $SECRET_NAME \
+          --namespace $K8S_NAMESPACE \
+          --docker-server=${{ inputs.docker-server }} \
+          --docker-username=${{ inputs.docker-username }} \
+          --docker-password=${{ inputs.docker-password }} \
+          --dry-run=${{ inputs.kubectl-dry-run }} \
+          --output=yaml
+
+    - name: Remove successful jobs
+      shell: bash
+      if: ${{ inputs.pre-deploy-delete-job-selector }} != '' }}
+      env:
+        K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace || 'default' }}
+      run: |
+        kubectl delete job \
+          --namespace $K8S_NAMESPACE \
+          --field-selector status.successful=1 \
+          --selector '${{ inputs.pre-deploy-delete-job-selector }}'
+
+    - name: Deploy
+      shell: bash
+      run: |
+        [[ ${{ inputs.kubectl-dry-run }} != 'none' ]] \
+          && echo "[dry run] Applying kustomization ${{ inputs.kustomization-dir }}..."
+        kubectl apply \
+          --kustomize=${{ inputs.kustomization-dir }} \
+          --dry-run=${{ inputs.kubectl-dry-run }} \
+          --output=yaml
