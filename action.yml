@@ -34,7 +34,7 @@ inputs:
     required: true
 
   pre-deploy-delete-job-selector:
-    description: Delete objects with `status.successful=1` and the given label (e.g. `autodelete-successful-on-deploy=yes`), before doing the deploy. Useful for cleaning up completed db migration jobs and similar.
+    description: Delete jobs with `status.successful=1` and the given label (e.g. `autodelete-successful-on-deploy=yes`), before doing the deploy. Useful for cleaning up completed db migration jobs and similar.
     required: false
     default: ""
 
