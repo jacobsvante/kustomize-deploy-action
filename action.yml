@@ -16,10 +16,9 @@ inputs:
     description: Path to the kustomize directory to apply / deploy (e.g. `kustomize/overlays/production`)
     required: true
 
-  image-tag:
-    description: Docker image tag to deploy (e.g. `0.9.14`)
-    required: true
-
+  docker-tag:
+    description: Docker image tag to deploy, if any (e.g. `0.9.14`)
+    required: false
   docker-server:
     description: Docker server (e.g. `docker.io`)
     required: true
@@ -111,7 +110,7 @@ runs:
       shell: bash
       if: ${{ steps.kustomization_base.outputs.images__0__newtag }}
       env:
-        IMAGE_TAG: ${{ inputs.image-tag }}
+        IMAGE_TAG: ${{ inputs.docker-tag }}
         KUSTOMIZE_FILE: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
       run: |
         sed -i.bkp "s/newTag: .*/newTag: \"$IMAGE_TAG\"/g" $KUSTOMIZE_FILE
