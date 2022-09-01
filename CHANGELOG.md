@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.1.1...v0.2.0) (2022-09-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* Rename `image-tag` to `docker-tag`
+
+### Features
+
+* Don't require docker inputs ([2f45afa](https://github.com/jacobsvante/kustomize-deploy-action/commit/2f45afa42aa25d1e523ec13eda849ead729571ff))
+
+
+### Bug Fixes
+
+* Rename `image-tag` to `docker-tag` ([8b324bb](https://github.com/jacobsvante/kustomize-deploy-action/commit/8b324bb651ab5e0e31229859510f2c87fe733a4f))
+
 ## [0.1.1](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.1.0...v0.1.1) (2022-08-29)
 
 
