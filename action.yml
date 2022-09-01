@@ -16,21 +16,21 @@ inputs:
     description: Path to the kustomize directory to apply / deploy (e.g. `kustomize/overlays/production`)
     required: true
 
+  docker-repo:
+    description: Docker repository/image to deploy, if any (e.g. `my-org/my-app`)
+    required: false
   docker-tag:
     description: Docker image tag to deploy, if any (e.g. `0.9.14`)
     required: false
   docker-server:
-    description: Docker server (e.g. `docker.io`)
-    required: true
-  docker-repo:
-    description: Docker repository (e.g. `my-org/my-app`)
-    required: true
+    description: Docker server, if any (e.g. `docker.io`)
+    required: false
   docker-username:
-    description: Docker user (e.g. `my-username`)
-    required: true
+    description: Docker user, if any (e.g. `my-username`)
+    required: false
   docker-password:
-    description: Docker password (e.g. `abc123`)
-    required: true
+    description: Docker password, if any (e.g. `abc123`)
+    required: false
 
   pre-deploy-delete-job-selector:
     description: Delete jobs with `status.successful=1` and the given label (e.g. `autodelete-successful-on-deploy=yes`), before doing the deploy. Useful for cleaning up completed db migration jobs and similar.
@@ -108,7 +108,7 @@ runs:
 
     - name: Substitute newTag
       shell: bash
-      if: ${{ steps.kustomization_base.outputs.images__0__newtag }}
+      if: ${{ inputs.docker-tag && steps.kustomization_base.outputs.images__0__newtag }}
       env:
         IMAGE_TAG: ${{ inputs.docker-tag }}
         KUSTOMIZE_FILE: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
@@ -117,7 +117,7 @@ runs:
 
     - name: Substitute newName
       shell: bash
-      if: ${{ steps.kustomization_base.outputs.images__0__newname }}
+      if: ${{ inputs.docker-server && inputs.docker-repo && steps.kustomization_base.outputs.images__0__newname }}
       env:
         DOCKER_SERVER: ${{ inputs.docker-server }}
         DOCKER_REPO: ${{ inputs.docker-repo }}
@@ -162,7 +162,7 @@ runs:
 
     - name: Create image pull secret
       shell: bash
-      if: ${{ inputs.create-image-pull-secret == 'true' }}
+      if: ${{ inputs.docker-server && inputs.docker-username && inputs.docker-password && inputs.create-image-pull-secret == 'true' }}
       env:
         SECRET_NAME: ${{ inputs.docker-server }}
         K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace || 'default' }}

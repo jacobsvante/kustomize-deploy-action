@@ -156,11 +156,11 @@ jobs:
         uses: ./
         with:
           kubeconfig: ${{ env.FAKE_KUBECONFIG }}
+          docker-repo: my-docker-namespace/my-docker-image
+          docker-tag: "0.1.2"
           docker-server: my-docker-registry.io
           docker-password: my-user
           docker-username: abc123
-          docker-repo: my-docker-namespace/my-docker-image
-          image-tag: "0.1.2"
           pre-deploy-delete-job-selector: delete-me=please
           kustomization-base-dir: ${{ env.KUSTOMIZATION_BASE_DIR }}
           kustomization-dir: ${{ env.KUSTOMIZATION_DIR }}
@@ -189,11 +189,11 @@ jobs:
         uses: ./
         with:
           kubeconfig: ${{ env.FAKE_KUBECONFIG }}
+          docker-repo: my-docker-namespace/my-docker-image
+          docker-tag: "0.1.2"
           docker-server: my-docker-registry.io
           docker-password: my-user
           docker-username: abc123
-          docker-repo: my-docker-namespace/my-docker-image
-          image-tag: "0.1.2"
           pre-deploy-delete-job-selector: delete-me=please
           kustomization-base-dir: ${{ env.KUSTOMIZATION_BASE_DIR }}
           kustomization-dir: ${{ env.KUSTOMIZATION_DIR }}
