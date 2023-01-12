@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.2.0...v0.2.1) (2023-01-12)
+
+
+### Bug Fixes
+
+* Remove deprecation messages from yamler ([2cfb874](https://github.com/jacobsvante/kustomize-deploy-action/commit/2cfb8749ef2c29c73f908226df11e110488f30e2))
+
 ## [0.2.0](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.1.1...v0.2.0) (2022-09-01)
 
 
