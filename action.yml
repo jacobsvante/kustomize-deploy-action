@@ -81,13 +81,13 @@ runs:
         clean: false
 
     - name: Parse base kustomization.yaml
-      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de # 0.0.12
+      uses: jacobsvante/yamler@v1
       id: kustomization_base
       with:
         yaml-file: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
 
     - name: Parse overlay kustomization.yaml
-      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de # 0.0.12
+      uses: jacobsvante/yamler@v1
       id: kustomization_overlay
       with:
         yaml-file: ${{ inputs.kustomization-dir }}/kustomization.yaml
