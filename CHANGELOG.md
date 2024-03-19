@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.2.2...v0.2.3) (2024-03-19)
+
+
+### Bug Fixes
+
+* Missing base kustomization.yaml file wasn't properly supported ([397c5f9](https://github.com/jacobsvante/kustomize-deploy-action/commit/397c5f935be47b33b0d31527e045c47789e32183))
+
 ## [0.2.2](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.2.1...v0.2.2) (2024-03-19)
 
 
