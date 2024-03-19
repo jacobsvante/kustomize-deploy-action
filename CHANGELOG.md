@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.2](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.2.1...v0.2.2) (2024-03-19)
+
+
+### Bug Fixes
+
+* Don't parse non-existing kustomization-base-dir kustomization.yaml file ([2e1bb3d](https://github.com/jacobsvante/kustomize-deploy-action/commit/2e1bb3d3ecf0b889216efad32cac5dc635f70fdd))
+* Upgrade to setup-kubectl v4 ([a41126f](https://github.com/jacobsvante/kustomize-deploy-action/commit/a41126fbd704b2370aaf1a3d42bcefcf374e26be))
+* Use upstream yamler version again and disable multidoc ([936c371](https://github.com/jacobsvante/kustomize-deploy-action/commit/936c371ec987294de54124a1be39bb9663037f5e))
+
 ## [0.2.1](https://github.com/jacobsvante/kustomize-deploy-action/compare/v0.2.0...v0.2.1) (2023-01-12)
 
 
