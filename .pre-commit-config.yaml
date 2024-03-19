@@ -1,3 +1,5 @@
+exclude: ^\.release-please-manifest.json$
+
 default_install_hook_types:
   - pre-commit
   - pre-merge-commit
