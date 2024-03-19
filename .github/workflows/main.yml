@@ -37,9 +37,9 @@ jobs:
           python-version: 3
       - uses: pre-commit/action@v3.0.1
 
-  test:
+  advanced-test:
     runs-on: ubuntu-latest
-    name: Test action
+    name: Advanced test
     env:
       KUSTOMIZATION_BASE_DIR: kustomize/base
       KUSTOMIZATION_DIR: kustomize/overlays/staging
@@ -204,17 +204,88 @@ jobs:
       - name: Ensure that job was deleted
         run: kubectl get -n my-k8s-namespace job/my-job || echo "Job not found, as expected"
 
-  post-test:
-    needs: [test]
+  post-advanced-test:
+    needs: [advanced-test]
     runs-on: ubuntu-latest
     steps:
       - name: Expect files created by action to no longer exist
         run: |
           [[ ! -f deploy-output.yaml ]]
 
+  simple-test:
+    runs-on: ubuntu-latest
+    name: Simple test
+    env:
+      KUSTOMIZATION_DIR: overlays/simple
+      DEBUG: "true"
+      KUBECONFIG_DRY_RUN: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create dummy nginx base
+        shell: bash
+        run: |
+
+          mkdir nginx
+          cd nginx
+
+          cat <<EOF > kustomization.yaml
+          resources:
+          - deployment.yaml
+          EOF
+
+          cat <<EOF > deployment.yaml
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: nginx
+          spec:
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                - name: nginx
+                  image: nginx:latest
+          EOF
+
+          cd ../..
+
+      - name: Create dummy kustomize overlay files
+        shell: bash
+        run: |
+          mkdir -p $KUSTOMIZATION_DIR
+          cd $KUSTOMIZATION_DIR
+
+          cat <<EOF > kustomization.yaml
+          bases:
+            - ../../nginx
+          EOF
+          cd ../../..
+
+      - name: Create Kubernetes cluster
+        uses: helm/kind-action@v1.9.0
+        with:
+          version: v0.14.0
+          kubectl_version: v1.24.3
+
+      - name: Run action
+        uses: ./
+        with:
+          kubeconfig: ${{ env.FAKE_KUBECONFIG }}
+          kustomization-dir: ${{ env.KUSTOMIZATION_DIR }}
+
+      - name: Test that deployment was made with expected properties
+        run: |
+          kubectl get deploy -o yaml | grep 'image: nginx:latest'
+
   release-pull-request:
     runs-on: ubuntu-latest
-    needs: [pre-commit, test, post-test]
+    needs: [pre-commit, advanced-test, post-advanced-test, simple-test]
     steps:
       - uses: google-github-actions/release-please-action@v4
         with:
