@@ -215,4 +215,5 @@ jobs:
     needs: [pre-commit, test, post-test]
     steps:
       - uses: google-github-actions/release-please-action@v4
-        id: release
+        with:
+          skip-github-release: true
