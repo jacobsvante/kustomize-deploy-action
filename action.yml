@@ -76,22 +76,24 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         clean: false
 
     - name: Parse base kustomization.yaml
-      uses: jacobsvante/yamler@v1
+      uses: juliojimenez/yamler@v1.0.8
       id: kustomization_base
       if: hashFiles(${{ inputs.kustomization-base-dir }}/kustomization.yaml) != ''
       with:
         yaml-file: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
+        multidoc: false
 
     - name: Parse overlay kustomization.yaml
-      uses: jacobsvante/yamler@v1
+      uses: juliojimenez/yamler@v1.0.8
       id: kustomization_overlay
       with:
         yaml-file: ${{ inputs.kustomization-dir }}/kustomization.yaml
+        multidoc: false
 
     - name: Print steps (including output from yamler)
       shell: bash
