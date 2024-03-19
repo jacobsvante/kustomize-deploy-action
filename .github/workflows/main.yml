@@ -6,7 +6,6 @@ on:
       - main
 
 env:
-  ACTION_NAME: kustomize-deploy-action
   FAKE_KUBECONFIG: |
     apiVersion: v1
     clusters:
@@ -39,7 +38,6 @@ jobs:
 
   advanced-test:
     runs-on: ubuntu-latest
-    name: Advanced test
     env:
       KUSTOMIZATION_BASE_DIR: kustomize/base
       KUSTOMIZATION_DIR: kustomize/overlays/staging
@@ -214,7 +212,6 @@ jobs:
 
   simple-test:
     runs-on: ubuntu-latest
-    name: Simple test
     env:
       KUSTOMIZATION_DIR: overlays/simple
       DEBUG: "true"
@@ -265,7 +262,7 @@ jobs:
           bases:
             - ../../nginx
           EOF
-          cd ../../..
+          cd ../..
 
       - name: Create Kubernetes cluster
         uses: helm/kind-action@v1.9.0

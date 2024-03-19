@@ -83,7 +83,7 @@ runs:
     - name: Parse base kustomization.yaml
       uses: juliojimenez/yamler@v1.0.8
       id: kustomization_base
-      if: hashFiles(${{ inputs.kustomization-base-dir }}/kustomization.yaml) != ''
+      if: ${{ hashFiles(inputs.kustomization-base-dir) != '' }}
       with:
         yaml-file: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
         multidoc: false
