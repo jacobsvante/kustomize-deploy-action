@@ -9,12 +9,12 @@ jobs:
   update-readme-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
       - run: npx action-docs --update-readme
       - run: npx prettier --write README.md
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "docs: Update readme"
           title: "docs: Update readme"
